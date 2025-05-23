@@ -1,4 +1,4 @@
-preferred_provider: azure_openai
+preferred_provider: openai
 
 providers:
   inception:
@@ -12,8 +12,8 @@ providers:
     api_key_env: OPENAI_API_KEY
     api_endpoint_env: OPENAI_ENDPOINT
     models:
-      high: gpt-4.1
-      low: gpt-4.1-mini
+      high: gpt-4o
+      low: gpt-4o-mini
 
   anthropic:
     api_key_env: ANTHROPIC_API_KEY

@@ -106,10 +106,10 @@ async def handle_client(reader, writer, fulfill_request):
                 writer.write(status_line.encode('utf-8'))
                 
                 # Add CORS headers if enabled
-                if CONFIG.server.enable_cors and 'Origin' in headers:
+                if CONFIG.server.enable_cors:
                     response_headers['Access-Control-Allow-Origin'] = '*'
                     response_headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
-                    response_headers['Access-Control-Allow-Headers'] = 'Content-Type'
+                    response_headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept'
                 
                 # Send headers
                 for header_name, header_value in response_headers.items():
@@ -317,6 +317,23 @@ async def fulfill_request(method, path, headers, query_params, body, send_respon
         send_chunk (callable): Function to send response body chunks
     '''
     try:
+        # Handle CORS preflight OPTIONS requests
+        if method == "OPTIONS":
+            response_headers = {
+                'Content-Type': 'text/plain',
+                'Content-Length': '0'
+            }
+            # Add CORS headers if enabled
+            if CONFIG.server.enable_cors:
+                response_headers['Access-Control-Allow-Origin'] = '*'
+                response_headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+                response_headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept'
+                response_headers['Access-Control-Max-Age'] = '86400'  # 24 hours
+            
+            await send_response(200, response_headers)
+            await send_chunk(b'', end_response=True)
+            return
+        
         streaming = True
         generate_mode = "none"
         if ("streaming" in query_params):
