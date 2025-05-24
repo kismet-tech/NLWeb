@@ -38,32 +38,56 @@ ENV PYTHONUNBUFFERED=1
 CMD ["python", "scripts/index-kismet-site.py"]
 EOF
 
-# Build and push the Docker image
-gcloud builds submit --tag $IMAGE_NAME --project $PROJECT_ID -f Dockerfile.indexer .
+# Create a cloudbuild.yaml file for the custom build
+cat > cloudbuild-indexer.yaml <<EOF
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-f', 'Dockerfile.indexer', '-t', '${IMAGE_NAME}', '.']
+images:
+- '${IMAGE_NAME}'
+EOF
 
-# Create the Cloud Run job
-echo "Creating Cloud Run job..."
-gcloud run jobs create $JOB_NAME \
-  --image $IMAGE_NAME \
-  --region $REGION \
-  --memory 1Gi \
-  --cpu 1 \
-  --max-retries 1 \
-  --task-timeout 600 \
-  --set-env-vars="OPENAI_API_KEY=${OPENAI_API_KEY}" \
-  --project $PROJECT_ID
+# Build and push the Docker image using the custom cloudbuild.yaml
+gcloud builds submit --config=cloudbuild-indexer.yaml --project $PROJECT_ID .
+
+# Check if job exists and update or create accordingly
+echo "Checking if Cloud Run job exists..."
+if gcloud run jobs describe $JOB_NAME --region $REGION --project $PROJECT_ID &>/dev/null; then
+    echo "Updating existing Cloud Run job..."
+    gcloud run jobs update $JOB_NAME \
+      --image $IMAGE_NAME \
+      --region $REGION \
+      --memory 1Gi \
+      --cpu 1 \
+      --max-retries 1 \
+      --task-timeout 600 \
+      --set-env-vars="OPENAI_API_KEY=${OPENAI_API_KEY},QDRANT_URL=${QDRANT_URL},QDRANT_API_KEY=${QDRANT_API_KEY}" \
+      --project $PROJECT_ID
+else
+    echo "Creating new Cloud Run job..."
+    gcloud run jobs create $JOB_NAME \
+      --image $IMAGE_NAME \
+      --region $REGION \
+      --memory 1Gi \
+      --cpu 1 \
+      --max-retries 1 \
+      --task-timeout 600 \
+      --set-env-vars="OPENAI_API_KEY=${OPENAI_API_KEY},QDRANT_URL=${QDRANT_URL},QDRANT_API_KEY=${QDRANT_API_KEY}" \
+      --project $PROJECT_ID
+fi
 
 # Clean up
 rm Dockerfile.indexer
+rm cloudbuild-indexer.yaml
 
 echo ""
-echo "Cloud Run job created successfully!"
+echo "Cloud Run job deployed successfully!"
 echo ""
 echo "To run the job manually:"
 echo "  gcloud run jobs execute $JOB_NAME --region $REGION --project $PROJECT_ID"
 echo ""
 echo "To set up scheduled execution with Cloud Scheduler:"
-echo "  1. Create a service account for Cloud Scheduler:"
+echo "  1. Create a service account for Cloud Scheduler (if not exists):"
 echo "     gcloud iam service-accounts create kismet-indexer-scheduler --project $PROJECT_ID"
 echo ""
 echo "  2. Grant necessary permissions:"

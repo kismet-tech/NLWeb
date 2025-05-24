@@ -1,6 +1,0 @@
-steps:
-- name: 'gcr.io/cloud-builders/docker'
-  args: ['build', '-f', 'Dockerfile.indexer', '-t', 'us-central1-docker.pkg.dev/playgroundist/cloud-run-source-deploy/kismet-site-indexer:v2', '.']
-  dir: '.'
-images:
-- 'us-central1-docker.pkg.dev/playgroundist/cloud-run-source-deploy/kismet-site-indexer:v2' 
