@@ -19,6 +19,37 @@ from config.config import CONFIG  # Import CONFIG for site validation
 # Assuming logger is available
 logger = get_logger(__name__)
 
+def create_mcp_response(response_type="function_response", status="success", response=None, error=None):
+    """
+    Create a properly formatted MCP response with schema version and capabilities
+    
+    Args:
+        response_type (str): Type of response (default: "function_response")
+        status (str): Status of response ("success" or "error")
+        response (dict): Response data (for success)
+        error (str): Error message (for error responses)
+    
+    Returns:
+        dict: Properly formatted MCP response
+    """
+    mcp_response = {
+        "schemaVersion": "1.0",
+        "type": response_type,
+        "status": status,
+        "capabilities": {
+            "functions": ["ask", "list_tools", "list_prompts", "get_prompt", "get_sites"],
+            "streaming": True,
+            "schema_types": ["FAQPage", "WebPage", "BlogPosting", "VideoObject", "ImageObject"]
+        }
+    }
+    
+    if status == "success" and response is not None:
+        mcp_response["response"] = response
+    elif status == "error" and error is not None:
+        mcp_response["error"] = error
+        
+    return mcp_response
+
 def handle_site_parameter(query_params):
     """
     Handle site parameter with configuration validation.
@@ -309,9 +340,15 @@ async def handle_ask_function(function_call, query_params, send_response, send_c
             
             # Format the response according to MCP protocol
             mcp_response = {
+                "schemaVersion": "1.0",
                 "type": "function_response",
                 "status": "success",
-                "response": result
+                "response": result,
+                "capabilities": {
+                    "functions": ["ask", "list_tools", "list_prompts", "get_prompt", "get_sites"],
+                    "streaming": True,
+                    "schema_types": ["FAQPage", "WebPage", "BlogPosting", "VideoObject", "ImageObject"]
+                }
             }
             
             # Send the response

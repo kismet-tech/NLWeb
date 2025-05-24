@@ -379,6 +379,23 @@ async def fulfill_request(method, path, headers, query_params, body, send_respon
             await handle_mcp_request(query_params, body, send_response, send_chunk, streaming=use_streaming)
             return
         elif (path.find("ask") != -1):
+            # Check if this is an MCP-formatted request
+            is_mcp_request = False
+            if body and 'content-type' in headers and 'json' in headers['content-type']:
+                try:
+                    request_data = json.loads(body)
+                    if "function_call" in request_data:
+                        is_mcp_request = True
+                except:
+                    pass
+            
+            if is_mcp_request:
+                # Route to MCP handler for MCP-formatted requests
+                logger.info("Routing /ask request to MCP handler")
+                await handle_mcp_request(query_params, body, send_response, send_chunk, streaming=streaming)
+                return
+            
+            # Otherwise handle as traditional request
             # Handle site parameter validation for ask endpoint
             validated_query_params = handle_site_parameter(query_params)
             
