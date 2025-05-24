@@ -66,20 +66,29 @@ def test_streaming_simple_format(base_url):
     
     if response.status_code == 200:
         print(f"✅ Status: {response.status_code}")
-        print("Response (first 5 lines):")
+        print("Response (first 10 lines after headers):")
         lines = []
-        for i, line in enumerate(response.iter_lines()):
-            if i >= 5:
-                break
+        data_started = False
+        for line in response.iter_lines():
             if line:
-                lines.append(line.decode('utf-8'))
-                print(f"  {line.decode('utf-8')}")
+                decoded = line.decode('utf-8')
+                # Skip until we see an empty line (end of headers)
+                if not data_started and decoded.strip() == '':
+                    data_started = True
+                    continue
+                if data_started:
+                    lines.append(decoded)
+                    if len(lines) <= 5:
+                        print(f"  {decoded}")
+                    if len(lines) >= 10:
+                        break
         
         # Check if it's SSE format
         if any("data:" in line for line in lines):
             print("✅ SSE format detected")
         else:
             print("❌ Not SSE format")
+            print(f"Lines collected: {lines}")
         return True
     else:
         print(f"❌ Status: {response.status_code}")
