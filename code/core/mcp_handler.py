@@ -26,7 +26,7 @@ def create_mcp_response(response_type="function_response", status="success", res
     Args:
         response_type (str): Type of response (default: "function_response")
         status (str): Status of response ("success" or "error")
-        response (dict): Response data (for success)
+        response (dict): Response data (for success) - will be placed in 'answer' field
         error (str): Error message (for error responses)
     
     Returns:
@@ -44,7 +44,12 @@ def create_mcp_response(response_type="function_response", status="success", res
     }
     
     if status == "success" and response is not None:
-        mcp_response["response"] = response
+        # Use 'answer' field for MCP v1.0 compliance
+        # If response has 'results', extract them directly
+        if isinstance(response, dict) and "results" in response:
+            mcp_response["answer"] = response["results"]
+        else:
+            mcp_response["answer"] = response
     elif status == "error" and error is not None:
         mcp_response["error"] = error
         
@@ -207,6 +212,19 @@ async def handle_mcp_request(query_params, body, send_response, send_chunk, stre
             try:
                 request_data = json.loads(body)
                 
+                # Check for simple format {"question": "..."}
+                if "question" in request_data:
+                    # Convert simple format to function_call format
+                    request_data = {
+                        "function_call": {
+                            "name": "ask",
+                            "arguments": json.dumps({
+                                "query": request_data["question"],
+                                "streaming": request_data.get("stream", False)
+                            })
+                        }
+                    }
+                
                 # Extract the function call details
                 function_call = request_data.get("function_call", {})
                 function_name = function_call.get("name")
@@ -234,11 +252,10 @@ async def handle_mcp_request(query_params, body, send_response, send_chunk, stre
                 
                 else:
                     # Return error for unsupported functions
-                    error_response = {
-                        "type": "function_response",
-                        "status": "error",
-                        "error": f"Unknown function: {function_name}"
-                    }
+                    error_response = create_mcp_response(
+                        status="error", 
+                        error=f"Unknown function: {function_name}"
+                    )
                     await send_response(400, {'Content-Type': 'application/json'})
                     await send_chunk(json.dumps(error_response), end_response=True)
                     return
@@ -247,30 +264,30 @@ async def handle_mcp_request(query_params, body, send_response, send_chunk, stre
                 logger.error(f"Invalid JSON in MCP request: {e}")
                 print(f"Invalid JSON in MCP request: {e}")
                 await send_response(400, {'Content-Type': 'application/json'})
-                await send_chunk(json.dumps({
-                    "type": "function_response",
-                    "status": "error",
-                    "error": f"Invalid JSON: {str(e)}"
-                }), end_response=True)
+                error_response = create_mcp_response(
+                    status="error",
+                    error=f"Invalid JSON: {str(e)}"
+                )
+                await send_chunk(json.dumps(error_response), end_response=True)
         else:
             logger.error("Empty MCP request body")
             print("Empty MCP request body")
             await send_response(400, {'Content-Type': 'application/json'})
-            await send_chunk(json.dumps({
-                "type": "function_response",
-                "status": "error",
-                "error": "Empty request body"
-            }), end_response=True)
+            error_response = create_mcp_response(
+                status="error",
+                error="Empty request body"
+            )
+            await send_chunk(json.dumps(error_response), end_response=True)
             
     except Exception as e:
         logger.error(f"Error processing MCP request: {e}", exc_info=True)
         print(f"Error processing MCP request: {e}\n{traceback.format_exc()}")
         await send_response(500, {'Content-Type': 'application/json'})
-        await send_chunk(json.dumps({
-            "type": "function_response",
-            "status": "error",
-            "error": f"Internal server error: {str(e)}"
-        }), end_response=True)
+        error_response = create_mcp_response(
+            status="error",
+            error=f"Internal server error: {str(e)}"
+        )
+        await send_chunk(json.dumps(error_response), end_response=True)
 
 async def handle_ask_function(function_call, query_params, send_response, send_chunk, streaming):
     """Handle the 'ask' function and its aliases"""
@@ -294,11 +311,10 @@ async def handle_ask_function(function_call, query_params, send_response, send_c
         
         if not query:
             # Return error for missing query parameter
-            error_response = {
-                "type": "function_response",
-                "status": "error",
-                "error": "Missing required parameter: query"
-            }
+            error_response = create_mcp_response(
+                status="error",
+                error="Missing required parameter: query"
+            )
             await send_response(400, {'Content-Type': 'application/json'})
             await send_chunk(json.dumps(error_response), end_response=True)
             return
@@ -338,18 +354,11 @@ async def handle_ask_function(function_call, query_params, send_response, send_c
             # Add chatbot instructions to the result
             result = add_chatbot_instructions(result)
             
-            # Format the response according to MCP protocol
-            mcp_response = {
-                "schemaVersion": "1.0",
-                "type": "function_response",
-                "status": "success",
-                "response": result,
-                "capabilities": {
-                    "functions": ["ask", "list_tools", "list_prompts", "get_prompt", "get_sites"],
-                    "streaming": True,
-                    "schema_types": ["FAQPage", "WebPage", "BlogPosting", "VideoObject", "ImageObject"]
-                }
-            }
+            # Format the response according to MCP protocol using the helper
+            mcp_response = create_mcp_response(
+                status="success",
+                response=result
+            )
             
             # Send the response
             await send_response(200, {'Content-Type': 'application/json'})
@@ -478,13 +487,10 @@ async def handle_list_tools_function(send_response, send_chunk):
         ]
         
         # Format the response according to MCP protocol
-        mcp_response = {
-            "type": "function_response",
-            "status": "success",
-            "response": {
-                "tools": available_tools
-            }
-        }
+        mcp_response = create_mcp_response(
+            status="success",
+            response={"tools": available_tools}
+        )
         
         # Send the response
         await send_response(200, {'Content-Type': 'application/json'})
