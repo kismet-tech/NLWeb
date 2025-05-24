@@ -7,6 +7,10 @@ Tests the simple format and proper response structure
 import requests
 import json
 import sys
+import urllib3
+
+# Disable SSL warnings for localhost testing
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def test_simple_format(base_url):
     """Test the simple {"question": "..."} format"""
@@ -16,7 +20,8 @@ def test_simple_format(base_url):
     response = requests.post(
         f"{base_url}/ask",
         json={"question": "ping"},
-        headers={"Content-Type": "application/json"}
+        headers={"Content-Type": "application/json"},
+        verify=False  # Allow self-signed certificates
     )
     
     if response.status_code == 200:
@@ -53,9 +58,10 @@ def test_streaming_simple_format(base_url):
     
     response = requests.post(
         f"{base_url}/ask",
-        json={"question": "test", "stream": true},
+        json={"question": "test", "stream": True},  # Fixed: use Python True
         headers={"Content-Type": "application/json", "Accept": "text/event-stream"},
-        stream=True
+        stream=True,
+        verify=False  # Allow self-signed certificates
     )
     
     if response.status_code == 200:
@@ -93,7 +99,8 @@ def test_function_call_format(base_url):
     response = requests.post(
         f"{base_url}/ask",
         json=payload,
-        headers={"Content-Type": "application/json"}
+        headers={"Content-Type": "application/json"},
+        verify=False  # Allow self-signed certificates
     )
     
     if response.status_code == 200:
@@ -123,7 +130,8 @@ def test_unsupported_function(base_url):
     response = requests.post(
         f"{base_url}/ask",
         json=payload,
-        headers={"Content-Type": "application/json"}
+        headers={"Content-Type": "application/json"},
+        verify=False  # Allow self-signed certificates
     )
     
     if response.status_code == 400:
