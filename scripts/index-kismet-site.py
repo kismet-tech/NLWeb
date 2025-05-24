@@ -128,6 +128,7 @@ async def fetch_sitemap(session: aiohttp.ClientSession) -> List[str]:
 async def create_nlweb_documents(urls: List[str]) -> List[Dict[str, Any]]:
     """Create NLWeb-compatible documents from URLs."""
     documents = []
+    faq_document = None  # To store FAQ data if found
     
     async with aiohttp.ClientSession() as session:
         for url in urls:
@@ -167,62 +168,80 @@ async def create_nlweb_documents(urls: List[str]) -> List[Dict[str, Any]]:
                 else:
                     doc["@type"] = "WebPage"  # Default type
                 
-                # If we found structured data, merge it
+                # Process structured data
                 if page_data["structured_data"]:
                     for sd in page_data["structured_data"]:
                         if isinstance(sd, dict):
-                            # Merge relevant fields
-                            for key in ["@type", "mainEntity", "offers", "publisher"]:
-                                if key in sd and key not in doc:
-                                    doc[key] = sd[key]
+                            # If it's an FAQPage, extract it separately
+                            if sd.get("@type") == "FAQPage" and sd.get("mainEntity"):
+                                print(f"Found FAQPage with {len(sd['mainEntity'])} questions")
+                                faq_document = {
+                                    "url": f"{url}#faq",
+                                    "name": "Kismet Frequently Asked Questions",
+                                    "@type": "FAQPage",
+                                    "site": SITE_NAME,
+                                    "mainEntity": sd["mainEntity"],
+                                    "description": "Comprehensive FAQ about Kismet's Direct-to-Guest AI platform for hotels"
+                                }
+                            # For other types, merge relevant fields
+                            else:
+                                for key in ["@type", "mainEntity", "offers", "publisher", "applicationCategory", "operatingSystem"]:
+                                    if key in sd and key not in doc:
+                                        doc[key] = sd[key]
                 
                 documents.append(doc)
             
             # Small delay to be respectful
             await asyncio.sleep(0.5)
     
-    # Add FAQ content directly (since it's embedded in the homepage)
-    faq_document = {
-        "url": "https://www.makekismet.com/#faq",
-        "name": "Kismet Frequently Asked Questions",
-        "@type": "FAQPage",
-        "site": SITE_NAME,
-        "mainEntity": [
-            {
-                "@type": "Question",
-                "name": "What is Kismet?",
-                "acceptedAnswer": {
-                    "@type": "Answer",
-                    "text": "Kismet is Direct-to-Guest AI for hotels. We help hotels identify each prospective guest, craft personal itineraries and convert them with one-tap booking across chat, social, web, ads, email and SMS."
+    # Add the FAQ document if we found one with structured data
+    if faq_document:
+        documents.append(faq_document)
+    else:
+        # If no FAQ was found in structured data, add a basic one
+        print("No FAQ found in structured data, adding basic FAQ")
+        basic_faq = {
+            "url": "https://www.makekismet.com/#faq",
+            "name": "Kismet Frequently Asked Questions",
+            "@type": "FAQPage",
+            "site": SITE_NAME,
+            "description": "FAQ about Kismet's Direct-to-Guest AI platform",
+            "mainEntity": [
+                {
+                    "@type": "Question",
+                    "name": "What is Kismet?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Kismet is Direct-to-Guest AI for hotels. We help hotels identify each prospective guest, craft personal itineraries and convert them with one-tap booking across chat, social, web, ads, email and SMS."
+                    }
+                },
+                {
+                    "@type": "Question", 
+                    "name": "How does Kismet work?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Kismet uses AI to engage with prospective guests across all channels. We identify guests, understand their preferences, create personalized offers, and enable instant booking—all while learning what works best for your hotel."
+                    }
+                },
+                {
+                    "@type": "Question",
+                    "name": "What channels does Kismet support?",
+                    "acceptedAnswer": {
+                        "@type": "Answer", 
+                        "text": "Kismet works across live chat, Instagram, your website, digital ads, email, and SMS. We unify all these channels into one seamless guest experience."
+                    }
+                },
+                {
+                    "@type": "Question",
+                    "name": "How quickly can I get started?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "You can go Direct-to-Guest in less than a month—no new booking engine required. Book a 20-minute discovery call to learn more."
+                    }
                 }
-            },
-            {
-                "@type": "Question", 
-                "name": "How does Kismet work?",
-                "acceptedAnswer": {
-                    "@type": "Answer",
-                    "text": "Kismet uses AI to engage with prospective guests across all channels. We identify guests, understand their preferences, create personalized offers, and enable instant booking—all while learning what works best for your hotel."
-                }
-            },
-            {
-                "@type": "Question",
-                "name": "What channels does Kismet support?",
-                "acceptedAnswer": {
-                    "@type": "Answer", 
-                    "text": "Kismet works across live chat, Instagram, your website, digital ads, email, and SMS. We unify all these channels into one seamless guest experience."
-                }
-            },
-            {
-                "@type": "Question",
-                "name": "How quickly can I get started?",
-                "acceptedAnswer": {
-                    "@type": "Answer",
-                    "text": "You can go Direct-to-Guest in less than a month—no new booking engine required. Book a 20-minute discovery call to learn more."
-                }
-            }
-        ]
-    }
-    documents.append(faq_document)
+            ]
+        }
+        documents.append(basic_faq)
     
     return documents
 
