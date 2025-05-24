@@ -76,8 +76,17 @@ async def extract_page_content(html: str) -> Dict[str, Any]:
     if meta_desc:
         description = meta_desc.get('content', '')
     
-    # Extract main content
-    # Remove script and style elements
+    # Look for JSON-LD structured data BEFORE removing scripts
+    json_ld_scripts = soup.find_all('script', type='application/ld+json')
+    structured_data = []
+    for script in json_ld_scripts:
+        try:
+            data = json.loads(script.string)
+            structured_data.append(data)
+        except:
+            pass
+    
+    # NOW remove script and style elements for text extraction
     for script in soup(["script", "style"]):
         script.decompose()
     
@@ -87,16 +96,6 @@ async def extract_page_content(html: str) -> Dict[str, Any]:
     lines = (line.strip() for line in text_content.splitlines())
     chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
     text_content = ' '.join(chunk for chunk in chunks if chunk)
-    
-    # Look for JSON-LD structured data
-    json_ld_scripts = soup.find_all('script', type='application/ld+json')
-    structured_data = []
-    for script in json_ld_scripts:
-        try:
-            data = json.loads(script.string)
-            structured_data.append(data)
-        except:
-            pass
     
     return {
         "title": title,
