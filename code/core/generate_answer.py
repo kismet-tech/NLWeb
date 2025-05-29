@@ -119,10 +119,24 @@ class GenerateAnswer(NLWebHandler):
         try:
             # Wait for retrieval to be done if not already
             logger.info("Retrieving items for query")
+            
+            # Log both queries for debugging
+            logger.info(f"Original query: '{self.query}'")
+            logger.info(f"Decontextualized query: '{self.decontextualized_query}'")
+            logger.info(f"Previous queries: {self.prev_queries}")
+            
             client = retriever.get_vector_db_client(query_params=self.query_params)
             top_embeddings = await client.search(self.decontextualized_query, self.site)
             self.items = top_embeddings  # Store all retrieved items
             logger.debug(f"Retrieved {len(top_embeddings)} items from database")
+            
+            # If no items found with decontextualized query, try original query
+            if len(top_embeddings) == 0 and self.decontextualized_query != self.query:
+                logger.warning(f"No items found with decontextualized query, trying original query: '{self.query}'")
+                top_embeddings = await client.search(self.query, self.site)
+                self.items = top_embeddings
+                logger.info(f"Retrieved {len(top_embeddings)} items with original query")
+            
             # Rank each item
             tasks = []
             for url, json_str, name, site in top_embeddings:
