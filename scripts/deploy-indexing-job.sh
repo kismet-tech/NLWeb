@@ -12,6 +12,9 @@ IMAGE_NAME="${ARTIFACT_REGISTRY_REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITOR
 
 echo "Building Docker image for indexing job..."
 
+# Change to NLWeb directory for correct build context
+cd "$(dirname "$0")/.."
+
 # Create a Dockerfile for the job
 cat > Dockerfile.indexer <<EOF
 FROM python:3.11-slim
@@ -26,7 +29,10 @@ WORKDIR /app
 
 # Copy NLWeb code
 COPY code/ ./code/
-COPY scripts/index-kismet-site.py ./scripts/index-kismet-site.py
+COPY scripts/index-kismet-with-pdfs.py ./scripts/index-kismet-with-pdfs.py
+
+# Create resources directory (PDFs will be fetched from URLs)
+RUN mkdir -p ./resources
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r code/requirements.txt
@@ -34,8 +40,8 @@ RUN pip install --no-cache-dir -r code/requirements.txt
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 
-# Run the indexing script
-CMD ["python", "scripts/index-kismet-site.py"]
+# Run the enhanced indexing script with PDF support
+CMD ["python", "scripts/index-kismet-with-pdfs.py"]
 EOF
 
 # Create a cloudbuild.yaml file for the custom build

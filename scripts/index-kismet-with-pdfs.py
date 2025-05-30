@@ -153,6 +153,52 @@ def scan_local_resources() -> List[Dict[str, Any]]:
     """Scan local resources directory for PDFs and other content."""
     resources = []
     
+    # Check if we're running in Cloud Run (no local files available)
+    is_cloud_run = os.environ.get('K_SERVICE') is not None
+    
+    if is_cloud_run:
+        # In Cloud Run, create documents for known PDFs without local access
+        pdf_resources = [
+            {
+                "filename": "Kismet_teaser_v2.1_20250523.pdf",
+                "title": "Kismet Direct-to-Guest AI Product Teaser",
+                "description": "Comprehensive product teaser showcasing Kismet's Direct-to-Guest AI platform capabilities, features, and benefits for hotels.",
+                "keywords": ["direct-to-guest", "ai platform", "hotel technology", "product overview", "features", "benefits"],
+                "document_type": "product_teaser"
+            },
+            {
+                "filename": "MEMO_ 4 in 5 OTA Bookers Visited a Direct Channel—Why Didn't They Book There?.pdf",
+                "title": "Industry Research: 4 in 5 OTA Bookers Visited a Direct Channel—Why Didn't They Book There?",
+                "description": "Industry research memo analyzing why guests who visit hotel direct channels still book through OTAs, and strategies to capture direct bookings.",
+                "keywords": ["ota research", "direct booking", "guest behavior", "industry research", "booking patterns"],
+                "document_type": "research_memo"
+            },
+            {
+                "filename": "Kismet Unveils Kismet Connect for Instagram.pdf",
+                "title": "Kismet Connect for Instagram Announcement",
+                "description": "Press release announcing Kismet Connect for Instagram, enabling direct hotel bookings through Instagram.",
+                "keywords": ["instagram", "social media booking", "kismet connect", "announcement", "press release"],
+                "document_type": "press_release"
+            }
+        ]
+        
+        for pdf in pdf_resources:
+            doc = {
+                "url": f"https://www.makekismet.com/resources/{pdf['filename']}",
+                "name": pdf["title"],
+                "@type": "DigitalDocument",
+                "site": SITE_NAME,
+                "description": pdf["description"],
+                "text": f"This is a PDF document: {pdf['description']}. For full content, please download from the URL.",
+                "keywords": enhance_keywords_for_content(pdf["title"], pdf["description"], " ".join(pdf["keywords"])),
+                "source": "pdf_resource",
+                "document_type": pdf["document_type"]
+            }
+            resources.append(doc)
+        
+        return resources
+    
+    # Original local file scanning code for development
     # Get the absolute path to resources directory
     script_dir = Path(__file__).parent
     
@@ -239,6 +285,217 @@ def scan_local_resources() -> List[Dict[str, Any]]:
     
     return resources
 
+def get_page_specific_faqs(url: str) -> List[Dict[str, Any]]:
+    """Get page-specific FAQs based on URL since they're added client-side."""
+    faqs = []
+    
+    if url.endswith('/sales') or '/sales#' in url:
+        # Sales page FAQs
+        sales_faqs = [
+            {
+                "question": "How does Kismet help my sales team spend less time on unqualified leads?",
+                "answer": "Kismet automatically qualifies leads using your hotel's past conversion data and real-time availability, ensuring your sales team only spends time on prospects with genuine booking intent and budget fit."
+            },
+            {
+                "question": "What types of leads does Kismet generate - are they mainly transient guests or group/corporate bookings?",
+                "answer": "Kismet specializes in leisure and social group segments—particularly smaller social groups that traditional sales processes often miss. We help you capture and nurture these high-value prospects with minimal manual effort from your sales team."
+            },
+            {
+                "question": "How does Kismet integrate with our existing CRM and sales processes?",
+                "answer": "Kismet integrates seamlessly with Tripleseat and Event Temple (in beta). For smaller properties, Kismet's built-in CRM capabilities are robust enough to serve as your primary sales management system."
+            },
+            {
+                "question": "Can Kismet help with group RFPs and meeting planner outreach?",
+                "answer": "Yes, Kismet streamlines RFP processing from both form submissions and natural language inquiries—whether through chat, email, or social media—and automatically drafts personalized initial responses for your review."
+            },
+            {
+                "question": "How much time will my sales team save per week using Kismet?",
+                "answer": "Hotels using Kismet typically cut sales busywork in half, saving an average of 10 hours per week. This lets your team focus on closing deals instead of chasing unqualified leads."
+            },
+            {
+                "question": "Does Kismet provide sales attribution - can we track which channels generate the best converting leads?",
+                "answer": "Attribution is core to what we do. Social groups are notoriously difficult to track due to long lead times and informal booking processes. Kismet shows you exactly which Instagram posts, ads, or touchpoints drive leads—and whether they actually convert to bookings."
+            },
+            {
+                "question": "How does Kismet handle lead scoring and qualification criteria?",
+                "answer": "Our proprietary lead scoring model analyzes your hotel's historical sales data combined with real-time contribution and displacement analysis, ensuring you prioritize prospects most likely to book and generate incremental revenue."
+            },
+            {
+                "question": "Can our sales team customize offers and pricing for leads generated by Kismet?",
+                "answer": "Absolutely. Kismet gives you the control on pricing and packaging as well as which types of leads to offer instant-book to and which will require personal touch."
+            },
+            {
+                "question": "How do I make sure AI can find my hotel?",
+                "answer": "To ensure AI discovery, hotels need to integrate Natural Language Web (NLWeb) and Model Context Protocol (MCP) best practices. Specifically, this means: 1) Maintain updated structured data (Schema.org markup) on their website, 2) Keep RSS feeds current with fresh content, 3) Allow AI crawlers like GPTBot and PerplexityBot access via robots.txt, 4) Publish regular content about amenities, local attractions, and unique offerings, and 5) Ensure their booking engine and website have clear, semantic HTML markup that AI can understand."
+            },
+            {
+                "question": "How does Kismet increase direct bookings?",
+                "answer": "Kismet increases direct bookings by offering guests a private booking channel with offers just for them. Specifically, this involves: 1) Identifying guests early in their search journey across social media, web, and email, 2) Creating personalized private-rate offers that aren't available on OTAs, 3) Using AI to match guests with relevant packages and experiences, 4) Converting social media interest into attributable bookings through natural language conversations, and 5) Building owned marketing audiences that reduce dependence on third-party channels while increasing repeat bookings."
+            },
+            {
+                "question": "Does Kismet replace my booking engine?",
+                "answer": "No, Kismet doesn't replace your booking engine, PMS, or CRS. Kismet is a lightweight AI layer that integrates with your existing systems through standard APIs. It enhances your current tech stack by adding conversational AI capabilities and intelligent guest matching, while all bookings flow through your existing booking engine and reservations appear in your current PMS. No software gets ripped out - Kismet just makes your existing systems smarter."
+            }
+        ]
+        for i, faq in enumerate(sales_faqs):
+            faqs.append({
+                "url": f"{url}#sales-faq-{i+1}",
+                "name": f"Sales FAQ: {faq['question']}",
+                "@type": "Question",
+                "site": SITE_NAME,
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": faq['answer']
+                },
+                "keywords": enhance_keywords_for_faq(faq['question'], faq['answer']),
+                "description": f"Sales FAQ about {faq['question'].lower()}",
+                "source": "sales_page_faq"
+            })
+    
+    elif url.endswith('/nlweb') or '/nlweb#' in url:
+        # NLWeb page FAQs (17 total)
+        nlweb_faqs = [
+            {
+                "question": "What is NLWeb?",
+                "answer": "Natural Language Web (NLWeb) is an open protocol developed by Microsoft that makes websites discoverable and understandable by AI assistants. It allows websites to add conversational interfaces and expose their content to AI systems like ChatGPT, Claude, and Perplexity. Think of it as making your hotel 'AI-readable' - when guests ask AI for hotel recommendations, NLWeb ensures your property appears with accurate, compelling information."
+            },
+            {
+                "question": "How does Kismet use NLWeb for hotels?",
+                "answer": "Kismet implements NLWeb to ensure your hotel is discoverable by AI assistants. We structure your hotel's content - from room descriptions to amenities and local attractions - in a way that AI can understand and recommend. When potential guests ask AI platforms for hotel suggestions, Kismet's NLWeb implementation ensures your property is presented accurately with real-time availability and personalized recommendations."
+            },
+            {
+                "question": "Which AI platforms can discover my hotel through NLWeb?",
+                "answer": "NLWeb works with all major AI platforms including ChatGPT, Claude, Perplexity, Google's AI assistants, and emerging platforms. Because NLWeb is built on open standards and integrates with Model Context Protocol (MCP), your hotel becomes discoverable by current AI systems and future platforms as they emerge."
+            },
+            {
+                "question": "How is NLWeb different from traditional SEO?",
+                "answer": "Traditional SEO optimizes for search engines using keywords, backlinks, and meta tags to rank in search results. NLWeb optimizes for AI understanding using semantic data, structured content, and natural language interfaces. While SEO helps people find your website through Google, NLWeb helps AI assistants understand and recommend your hotel in conversational contexts when guests ask questions like 'Where should I stay for a romantic weekend in Napa Valley?'"
+            },
+            {
+                "question": "Do I need to rebuild my website to use NLWeb?",
+                "answer": "No, you don't need to rebuild your website. NLWeb works with your existing site by leveraging structured data you may already have (like Schema.org markup) and adding a lightweight layer that makes your content AI-readable. Kismet handles the technical implementation, ensuring your current website design and user experience remain unchanged while becoming discoverable by AI."
+            },
+            {
+                "question": "How quickly will AI start finding my hotel after implementing NLWeb?",
+                "answer": "Most hotels see their content indexed by AI platforms within 48-72 hours of NLWeb implementation. You'll start seeing AI-driven traffic and inquiries within the first week. The full benefits - including improved AI recommendations and higher visibility in conversational queries - typically materialize within 30 days as AI systems learn and index your structured content."
+            },
+            {
+                "question": "What kind of hotel information does NLWeb make available to AI?",
+                "answer": "NLWeb structures all your hotel's key information for AI consumption: room types and amenities, real-time availability and pricing, location and nearby attractions, dining options and spa services, special packages and promotions, guest policies, and unique selling points. You maintain full control over what information is shared, ensuring AI presents your hotel accurately while protecting sensitive data."
+            },
+            {
+                "question": "Can NLWeb help with voice search and AI assistants like Alexa?",
+                "answer": "Yes, NLWeb is designed to work with all forms of AI interaction, including voice assistants. As more travelers use voice search to plan trips, NLWeb ensures your hotel is discoverable through natural language queries across all AI platforms, whether text-based like ChatGPT or voice-based like Alexa and Google Assistant."
+            },
+            {
+                "question": "How does NLWeb protect my hotel's data and pricing?",
+                "answer": "NLWeb includes built-in access controls that let you decide what information AI can access. You can share public information like amenities and location while keeping sensitive data like revenue metrics private. Pricing can be shown as ranges or dynamically updated based on your revenue management rules, maintaining rate parity while enabling AI discovery."
+            },
+            {
+                "question": "What's the ROI of implementing NLWeb for hotels?",
+                "answer": "Hotels implementing NLWeb saw a double-digit contribution from AI traffic within weeks of implementation. As AI adoption grows - with over 180 million ChatGPT users alone - being discoverable by AI becomes essential. Early adopters gain competitive advantage by appearing in AI recommendations while competitors remain invisible to these platforms."
+            },
+            {
+                "question": "Can't my hotel just implement the open source NLWeb protocol ourselves?",
+                "answer": "While NLWeb is open source, implementing it effectively for hotels requires significant technical expertise and ongoing maintenance. Most hotels lack Schema.org compliance - a fundamental requirement. Additionally, the generic NLWeb protocol isn't optimized for hospitality data models like room types, availability, pricing tiers, and seasonal packages. Without proper implementation, AI assistants may misunderstand or misrepresent your property."
+            },
+            {
+                "question": "What makes Kismet's NLWeb implementation different?",
+                "answer": "Kismet has forked and extensively modified NLWeb specifically for hotels. We've rewritten the LLM logic to understand hospitality concepts like dynamic pricing, room categories, and guest preferences. Our indexing system is built around hotel data models - not generic web content. We also create and maintain RSS feeds for your property, ensuring your content stays fresh and discoverable without your team lifting a finger."
+            },
+            {
+                "question": "What technical challenges does Kismet solve for hotels?",
+                "answer": "Kismet eliminates three major technical hurdles: First, we handle all Schema.org structuring - most hotels aren't compliant and would need months of development work. Second, we've built hotel-specific AI logic that understands amenities, packages, and availability in ways generic NLWeb cannot. Third, we manage all protocol updates - as NLWeb evolves rapidly, your implementation stays current automatically without your IT team tracking changes or rewriting code."
+            },
+            {
+                "question": "How much technical work would my hotel save by using Kismet?",
+                "answer": "Implementing NLWeb properly requires a dedicated development team for 3-6 months, plus ongoing maintenance. You'd need expertise in Schema.org, RSS feeds, semantic indexing, and AI model integration. With Kismet, implementation takes days, not months. Your web team needs zero NLWeb knowledge - we handle the complex protocol work while they focus on your website and guest experience."
+            },
+            {
+                "question": "Will Kismet keep my hotel's NLWeb implementation up to date?",
+                "answer": "Yes, this is one of Kismet's key advantages. NLWeb is evolving rapidly as AI capabilities expand. When the protocol updates, when new AI platforms emerge, or when best practices change, Kismet automatically updates your implementation. Your hotel stays at the cutting edge of AI discovery without your team monitoring GitHub repos or rewriting integrations. Think of it as future-proofing your AI presence."
+            },
+            {
+                "question": "What does Kismet charge for NLWeb implementation?",
+                "answer": "For hotels that are good candidates for Kismet's full platform, we implement NLWeb at no charge. We believe in the open source ethos - some technologies should be accessible to all. There are no setup fees, monthly fees, or hidden costs for NLWeb. We invest in making your hotel AI-discoverable because we know it benefits everyone when travelers can find the perfect property through any channel they choose."
+            },
+            {
+                "question": "Why would Kismet implement NLWeb for free?",
+                "answer": "Our business model aligns perfectly with hotel interests. Kismet generates revenue only when guests book directly through our AI-powered booking platform - not from NLWeb itself. By making hotels discoverable through AI search, we help drive more direct bookings for everyone. Think of NLWeb as the foundation: it brings guests to discover your property through AI, and if they choose to book through Kismet's personalized booking experience, we earn a success fee. No bookings, no fees. This alignment means we're invested in your success, not in charging for basic AI visibility."
+            }
+        ]
+        for i, faq in enumerate(nlweb_faqs):
+            faqs.append({
+                "url": f"{url}#nlweb-faq-{i+1}",
+                "name": f"NLWeb FAQ: {faq['question']}",
+                "@type": "Question",
+                "site": SITE_NAME,
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": faq['answer']
+                },
+                "keywords": enhance_keywords_for_faq(faq['question'], faq['answer']),
+                "description": f"NLWeb FAQ about {faq['question'].lower()}",
+                "source": "nlweb_page_faq"
+            })
+    
+    elif url.endswith('/mcp') or '/mcp#' in url:
+        # MCP page FAQs (9 total)
+        mcp_faqs = [
+            {
+                "question": "What is MCP?",
+                "answer": "Model Context Protocol (MCP) is an open standard developed by Anthropic that enables AI assistants to connect with data sources and tools in real-time. Think of it as a USB-C port for AI - it provides a standardized way for AI models like Claude and ChatGPT to access your hotel's systems, check availability, quote rates, and even process bookings. MCP replaces fragmented API integrations with a single, secure protocol."
+            },
+            {
+                "question": "How does Kismet implement MCP for hotels?",
+                "answer": "Kismet uses MCP to bridge AI assistants with your hotel's PMS, booking engine, and CRM systems. When a guest asks an AI assistant about availability or wants to make a booking, MCP enables that AI to securely access your real-time data and complete transactions. This means guests can check rates, book rooms, and even modify reservations through natural conversation with AI - all while the data flows directly into your existing systems."
+            },
+            {
+                "question": "Is MCP secure for hotel data?",
+                "answer": "Yes, MCP is designed with enterprise-grade security. Kismet's MCP uses OAuth 2.1 authentication, TLS encryption for all data transfers, and granular permission controls. You decide exactly what data AI can access and what actions it can perform. All interactions are logged for complete auditability. Your sensitive data like revenue reports or guest personal information can be kept completely private while still enabling AI-powered bookings."
+            },
+            {
+                "question": "Which hotel systems can MCP connect to?",
+                "answer": "Kismet MCP integrates with major property management systems including Mews, Cloudbeds, Opera (Oracle), Stayntouch, and others. It also connects with booking engines, channel managers, CRM systems, and revenue management tools. If your system has an API, Kismet can likely integrate it through MCP. We handle all the technical connections, so you don't need to worry about compatibility."
+            },
+            {
+                "question": "What can guests do through MCP-enabled AI?",
+                "answer": "With MCP, guests can have natural conversations with AI to: check real-time room availability and rates, compare different room types and packages, make instant bookings with confirmation, modify or cancel existing reservations, inquire about amenities and services, get personalized recommendations based on preferences, and receive immediate answers about policies and facilities. All through conversational AI, without navigating websites or apps."
+            },
+            {
+                "question": "How does MCP differ from chatbots?",
+                "answer": "Traditional chatbots provide pre-programmed responses and often can't access real-time data or complete transactions. MCP-enabled AI assistants can actually check your live inventory, quote accurate prices based on current availability, apply dynamic pricing rules, and complete bookings that flow directly into your PMS. Instead of saying 'please visit our website,' MCP allows AI to say 'I found a deluxe room available for those dates at $189/night. Shall I book it for you?'"
+            },
+            {
+                "question": "What control do I have over AI actions through MCP?",
+                "answer": "You have complete control through permission settings. You can configure AI to: view-only mode (check availability but not book), quote generation (create offers but require human approval), instant booking for certain room types or rate ranges, or full autonomy with defined business rules. These permissions can be adjusted anytime through your Kismet dashboard, and you can set different permissions for different AI platforms or use cases."
+            },
+            {
+                "question": "How long does MCP implementation take?",
+                "answer": "Basic MCP implementation typically takes 1-2 weeks for single properties. This includes connecting to your PMS, testing integrations, configuring permissions, and training your team. More complex setups with multiple properties, custom workflows, or extensive system integrations may take 3-4 weeks. Kismet handles all technical aspects, so your IT team's involvement is minimal."
+            },
+            {
+                "question": "Will MCP-enabled bookings appear in my PMS?",
+                "answer": "Yes, all bookings made through MCP flow directly into your PMS just like any other direct booking. They appear with guest details, room assignments, and payment information exactly as if booked through your website. MCP bookings are direct bookings, and you can track their source for attribution. Your front desk staff will see them immediately in your regular reservation system."
+            }
+        ]
+        for i, faq in enumerate(mcp_faqs):
+            faqs.append({
+                "url": f"{url}#mcp-faq-{i+1}",
+                "name": f"MCP FAQ: {faq['question']}",
+                "@type": "Question",
+                "site": SITE_NAME,
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": faq['answer']
+                },
+                "keywords": enhance_keywords_for_faq(faq['question'], faq['answer']),
+                "description": f"MCP FAQ about {faq['question'].lower()}",
+                "source": "mcp_page_faq"
+            })
+    
+    return faqs
+
 async def fetch_url_content(session: aiohttp.ClientSession, url: str) -> str:
     """Fetch content from a URL."""
     try:
@@ -293,7 +550,9 @@ async def extract_page_content(html: str) -> Dict[str, Any]:
     structured_data = []
     json_ld_scripts = soup.find_all('script', attrs={'type': 'application/ld+json'})
     
-    for script in json_ld_scripts:
+    # Process JSON-LD scripts in reverse order to prioritize page-specific FAQs
+    # (they're often added later via JavaScript and appear after the root layout FAQs)
+    for script in reversed(json_ld_scripts):
         try:
             script_text = script.string or script.get_text()
             if script_text:
@@ -638,40 +897,46 @@ async def create_comprehensive_documents(sitemap_urls: List[str], rss_items: Lis
                     )
                 }
                 
-                # Process structured data for FAQs
-                if page_data["structured_data"]:
-                    for sd in page_data["structured_data"]:
-                        if isinstance(sd, dict):
-                            # Extract individual FAQ documents
-                            if sd.get("@type") == "FAQPage" and sd.get("mainEntity"):
-                                print(f"Found FAQPage with {len(sd['mainEntity'])} questions")
-                                for i, question in enumerate(sd["mainEntity"]):
-                                    if question.get("@type") == "Question":
-                                        question_name = question.get("name", "")
-                                        answer_text = question.get("acceptedAnswer", {}).get("text", "")
-                                        
-                                        # Generate enhanced keywords
-                                        keywords = enhance_keywords_for_faq(question_name, answer_text)
-                                        
-                                        # Create individual FAQ document
-                                        faq_doc = {
-                                            "url": f"{url}#faq-{i+1}",
-                                            "name": f"FAQ: {question_name}",
-                                            "@type": "Question",
-                                            "site": SITE_NAME,
-                                            "acceptedAnswer": question.get("acceptedAnswer", {}),
-                                            "keywords": keywords,
-                                            "description": f"FAQ about {question_name.lower()}"
-                                        }
-                                        
-                                        documents.append(faq_doc)
-                                        print(f"Created FAQ #{i+1}: {question_name}")
-                            
-                            # Merge other structured data
-                            else:
-                                for key in ["@type", "offers", "publisher", "applicationCategory", "operatingSystem"]:
-                                    if key in sd and key not in doc:
-                                        doc[key] = sd[key]
+                # Get page-specific FAQs based on URL
+                page_faqs = get_page_specific_faqs(url)
+                if page_faqs:
+                    print(f"Added {len(page_faqs)} page-specific FAQs for {url}")
+                    documents.extend(page_faqs)
+                else:
+                    # Process structured data for FAQs (for homepage and other pages)
+                    if page_data["structured_data"]:
+                        for sd in page_data["structured_data"]:
+                            if isinstance(sd, dict):
+                                # Extract individual FAQ documents
+                                if sd.get("@type") == "FAQPage" and sd.get("mainEntity"):
+                                    print(f"Found FAQPage with {len(sd['mainEntity'])} questions")
+                                    for i, question in enumerate(sd["mainEntity"]):
+                                        if question.get("@type") == "Question":
+                                            question_name = question.get("name", "")
+                                            answer_text = question.get("acceptedAnswer", {}).get("text", "")
+                                            
+                                            # Generate enhanced keywords
+                                            keywords = enhance_keywords_for_faq(question_name, answer_text)
+                                            
+                                            # Create individual FAQ document
+                                            faq_doc = {
+                                                "url": f"{url}#faq-{i+1}",
+                                                "name": f"FAQ: {question_name}",
+                                                "@type": "Question",
+                                                "site": SITE_NAME,
+                                                "acceptedAnswer": question.get("acceptedAnswer", {}),
+                                                "keywords": keywords,
+                                                "description": f"FAQ about {question_name.lower()}"
+                                            }
+                                            
+                                            documents.append(faq_doc)
+                                            print(f"Created FAQ #{i+1}: {question_name}")
+                                
+                                # Merge other structured data
+                                else:
+                                    for key in ["@type", "offers", "publisher", "applicationCategory", "operatingSystem"]:
+                                        if key in sd and key not in doc:
+                                            doc[key] = sd[key]
                 
                 documents.append(doc)
                 processed_urls.add(url)
