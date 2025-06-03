@@ -17,7 +17,7 @@ import retrieval.retriever as retriever
 from prompts.prompts import find_prompt, fill_ranking_prompt
 from utils.trim import trim_json, trim_json_hard
 from utils.logging_config_helper import get_configured_logger
-from utils.utils import log
+from utils.utils import log, get_param
 import pre_retrieval.analyze_query as analyze_query
 import pre_retrieval.relevance_detection as relevance_detection
 import pre_retrieval.memory as memory
@@ -31,7 +31,7 @@ logger = get_configured_logger("generate_answer")
 
 class GenerateAnswer(NLWebHandler):
 
-    GATHER_ITEMS_THRESHOLD = 55
+    GATHER_ITEMS_THRESHOLD = 30
 
     RANKING_PROMPT_NAME = "RankingPromptForGenerate"
     SYNTHESIZE_PROMPT_NAME = "SynthesizePromptForGenerate"
@@ -183,13 +183,28 @@ class GenerateAnswer(NLWebHandler):
                 }
                 await self.send_message(message)
                 return
-                
-            response = await PromptRunner(self).run_prompt(self.SYNTHESIZE_PROMPT_NAME, timeout=100, verbose=True)
+            
+            # Get audience from query params for human vs AI responses
+            audience = get_param(self.query_params, "audience", str, None)
+            if not audience:
+                # Check for isHuman parameter as fallback
+                is_human = get_param(self.query_params, "isHuman", bool, False)
+                audience = "human" if is_human else None
+            
+            print(f"DEBUG: Synthesis - audience parameter: {audience}")
+            print(f"DEBUG: Synthesis - isHuman raw: {get_param(self.query_params, 'isHuman', bool, False)}")
+            print(f"DEBUG: Synthesis - query_params: {self.query_params}")
+            
+            # Call the synthesis prompt with audience parameter
+            runner = PromptRunner(self)
+            print(f"DEBUG: About to call run_prompt with audience='{audience}'")
+            ans_synthesized = await runner.run_prompt("SynthesizePromptForGenerate", level="low", verbose=True, audience=audience)
+            print(f"DEBUG: Synthesis completed, got response: {type(ans_synthesized)}")
             logger.debug(f"Synthesis response received")
             
             json_results = []
             description_tasks = []
-            answer = response["answer"]
+            answer = ans_synthesized["answer"]
             
             # Create initial message with just the answer
             message = {"message_type": "nlws", "answer": answer, "items": json_results}
@@ -197,8 +212,8 @@ class GenerateAnswer(NLWebHandler):
             await self.send_message(message)
             
             # Process each URL mentioned in the response
-            if "urls" in response and response["urls"]:
-                for url in response["urls"]:
+            if "urls" in ans_synthesized and ans_synthesized["urls"]:
+                for url in ans_synthesized["urls"]:
                     # Find the matching item in our items list
                     matching_items = [item for item in self.items if item[0] == url]
                     if not matching_items:

@@ -379,6 +379,13 @@ async def fulfill_request(method, path, headers, query_params, body, send_respon
             await handle_mcp_request(query_params, body, send_response, send_chunk, streaming=use_streaming)
             return
         elif (path.find("ask") != -1):
+            # Debug: Check for isHuman parameter
+            print(f"DEBUG: Query params received: {query_params}")
+            if 'isHuman' in query_params:
+                print(f"DEBUG: isHuman parameter found: {query_params['isHuman']}")
+            else:
+                print("DEBUG: isHuman parameter NOT found in query_params")
+            
             # Check if this is an MCP-formatted request
             is_mcp_request = False
             if body and 'content-type' in headers and 'json' in headers['content-type']:
@@ -398,6 +405,11 @@ async def fulfill_request(method, path, headers, query_params, body, send_respon
             # Otherwise handle as traditional request
             # Handle site parameter validation for ask endpoint
             validated_query_params = handle_site_parameter(query_params)
+            
+            # Add audience detection based on isHuman parameter
+            is_human = get_param(validated_query_params, "isHuman", bool, False)
+            validated_query_params['audience'] = 'human' if is_human else 'ai'
+            logger.debug(f"Request audience: {'human' if is_human else 'ai'} (isHuman={is_human})")
             
             if (not streaming):
                 if (generate_mode == "generate"):

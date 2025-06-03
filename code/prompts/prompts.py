@@ -190,9 +190,24 @@ def get_cached_values(site, item_type, prompt_name):
     logger.debug(f"Cache miss for prompt: {cache_key}")
     return None
 
-def find_prompt(site, item_type, prompt_name):  
-    logger.info(f"Finding prompt: '{prompt_name}' for site='{site}', item_type='{item_type}'")
+def find_prompt(site, item_type, prompt_name, audience=None):  
+    # If audience is specified, try audience-specific prompt first
+    if audience and audience.lower() == 'human':
+        audience_prompt_name = f"{prompt_name}_Human"
+        logger.info(f"Trying audience-specific prompt: '{audience_prompt_name}' for site='{site}', item_type='{item_type}'")
+        
+        prompt_text, return_struc = find_base_prompt(site, item_type, audience_prompt_name)
+        if prompt_text is not None:
+            logger.info(f"Using human-specific prompt: '{audience_prompt_name}'")
+            return prompt_text, return_struc
+        else:
+            logger.debug(f"Human-specific prompt '{audience_prompt_name}' not found, falling back to base prompt")
     
+    # Fall back to base prompt
+    logger.info(f"Finding prompt: '{prompt_name}' for site='{site}', item_type='{item_type}'")
+    return find_base_prompt(site, item_type, prompt_name)
+
+def find_base_prompt(site, item_type, prompt_name):
     if (prompt_roots == []):
         logger.debug("Prompt roots not initialized, initializing now")
         init_prompts()

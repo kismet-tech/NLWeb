@@ -16,16 +16,16 @@ logger = get_configured_logger("prompt_runner")
 
 class PromptRunner:
 
-    def get_prompt(self, prompt_name):
-        logger.debug(f"Getting prompt: {prompt_name}")
+    def get_prompt(self, prompt_name, audience=None):
+        logger.debug(f"Getting prompt: {prompt_name} for audience: {audience}")
         item_type = self.handler.item_type
         site = self.handler.site
         
-        logger.debug(f"Looking for prompt '{prompt_name}' with site='{site}', item_type='{item_type}'")
-        prompt_str, ans_struc = find_prompt(site, item_type, prompt_name)
+        logger.debug(f"Looking for prompt '{prompt_name}' with site='{site}', item_type='{item_type}', audience='{audience}'")
+        prompt_str, ans_struc = find_prompt(site, item_type, prompt_name, audience=audience)
 
         if (prompt_str is None):
-            logger.warning(f"Prompt '{prompt_name}' not found for site='{site}', item_type='{item_type}'")
+            logger.warning(f"Prompt '{prompt_name}' not found for site='{site}', item_type='{item_type}', audience='{audience}'")
             return None, None
         
         logger.debug(f"Found prompt '{prompt_name}', length: {len(prompt_str)} chars")
@@ -35,11 +35,11 @@ class PromptRunner:
         self.handler = handler
         logger.debug(f"PromptRunner initialized with handler for site: {handler.site}")
 
-    async def run_prompt(self, prompt_name, level="low", verbose=False, timeout=8):
-        logger.info(f"Running prompt: {prompt_name} with level={level}, timeout={timeout}s")
+    async def run_prompt(self, prompt_name, level="low", verbose=False, timeout=8, audience=None):
+        logger.info(f"Running prompt: {prompt_name} with level={level}, timeout={timeout}s, audience={audience}")
         
         try:
-            prompt_str, ans_struc = self.get_prompt(prompt_name)
+            prompt_str, ans_struc = self.get_prompt(prompt_name, audience=audience)
             if (prompt_str is None):
                 if (verbose):
                     print(f"Prompt {prompt_name} not found")

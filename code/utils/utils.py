@@ -1,4 +1,3 @@
-
 recipe_sites = ['seriouseats', 'hebbarskitchen', 'latam_recipes',
                 'woksoflife', 'cheftariq',  'spruce', 'nytimes']
 
@@ -48,7 +47,8 @@ def visibleUrl(url):
 
 def get_param(query_params, param_name, param_type=str, default_value=None):
     value = query_params.get(param_name, default_value)
-    if (value is not None and len(value) == 1):
+    # Only process list values from query params, not default values
+    if value is not None and isinstance(value, list) and len(value) == 1:
         value = value[0]
         if param_type == str:
             if value is None:
@@ -72,7 +72,10 @@ def get_param(query_params, param_name, param_type=str, default_value=None):
             return [item.strip() for item in value.strip('[]').split(',') if item.strip()]
         else:
             raise ValueError(f"Unsupported parameter type: {param_type}")
-    return default_value
+    # Handle boolean conversion for non-list values
+    elif param_type == bool and value is not None and not isinstance(value, bool):
+        return str(value).lower() == "true"
+    return value if value is not None else default_value
 
 def log(message):
     print(message)
