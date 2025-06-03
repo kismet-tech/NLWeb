@@ -154,7 +154,7 @@
         If the score is above 50, provide a short description of the item highlighting the relevance to the user's question, without mentioning the user's question.
         Provide an explanation of the relevance of the item to the user's question, without mentioning the user's question or the score or explicitly mentioning the term relevance.
         If the score is below 75, in the description, include the reason why it is still relevant.
-        The user's question is: \"{request.query}\". The item's description in schema.org format is \"{item.description}\".
+        The user's question is: "{request.query}\". The item's description in schema.org format is "{item.description}".
       </promptString>
       <returnStruc>
         {
@@ -166,11 +166,19 @@
 
     <Prompt ref="RankingPromptForGenerate">
       <promptString>
-        Assign a score between 0 and 100 to the following item
-        based on useful it might be to answering the user's question. 
-        The user's question is: \"{request.query}\".
-        The item in schema.org format is: \"{item.description}\". Include a 
-        short description of the item in the description field.
+        Assign a score between 0 and 100 to the following item based on how useful it might be to answering the user's question.
+        
+        When evaluating relevance, consider:
+        - Direct matches (exact topic/service mentioned)
+        - Semantic similarity (related concepts, synonyms)
+        - For pricing/cost questions: ANY item containing specific prices, fees, costs, or payment information is highly relevant (score 80+)
+        - For general questions: specific FAQs that answer part of the question are valuable
+        - Broader company/service information can provide context even if not directly answering the question
+        
+        The user's question is: "{request.query}".
+        The item in schema.org format is: "{item.description}". 
+        
+        Include a short description of the item in the description field.
       </promptString>
       <returnStruc>
         {
@@ -183,18 +191,104 @@
     
     <Prompt ref="SynthesizePromptForGenerate">
       <promptString>
-        Given the following items, synthesize an answer to the user's question. 
-        You do not need to include all the items, but you should include the most relevant ones.
-        For each of the items included in the answer, provide the URL of the item in 
-        the 'urls' field of the structured output. Make sure to include 
-        the URL for every one of the items. Do not include the URL in the answer field.
-        The user's question is: {request.query}.
-        The items are: {request.answers}.
+        Answer the user's specific question using the provided information. Be direct and precise.
+
+        IMPORTANT INSTRUCTIONS:
+        - DIRECTLY answer the user's question first, don't start with general company information
+        - If asking about costs/pricing/fees: extract and present specific dollar amounts, percentages, or pricing details from the retrieved information
+        - If asking about how something works: explain the specific process or mechanism
+        - If asking yes/no questions: start with "Yes" or "No" then explain
+        - Use specific facts, numbers, and details from the retrieved content
+        - Only include general company information if it directly supports answering the question
+
+        User's question: {request.query}
+        Retrieved information: {request.answers}
+        
+        Provide a focused answer that directly addresses what the user asked.
       </promptString>
       <returnStruc>
         {
-          "answer" : "string",
+          "answer" : "direct answer to the user's specific question",
           "urls" : "urls of the items included in the answer"
+        }
+      </returnStruc>
+    </Prompt>
+
+    <Prompt ref="SynthesizePromptForGenerate_Human">
+      <promptString>
+        You're having a conversation with a potential hotel customer who's considering Kismet. Write as if you're a knowledgeable consultant who genuinely wants to help them understand how Kismet can benefit their business.
+
+        NATURAL CONVERSATION STYLE:
+        - Lead with the specific answer to their question first
+        - Use "you" and "your" frequently to make it personal  
+        - Explain the value in their terms (revenue, savings, ease of use)
+        - Give concrete numbers and ranges when available
+        - Be enthusiastic but not pushy - let the value speak for itself
+        - **LIMIT YOUR MAIN ANSWER TO 2-3 SENTENCES** (not counting any follow-up question you ask)
+        - Only use more sentences if the user's question is particularly long, complex, or has multiple parts
+        - End with a helpful offer to dive deeper or clarify (this doesn't count toward the sentence limit)
+
+        AVOID:
+        - Starting every response with "Kismet is designed to..." or similar templates
+        - Formal business language like "The costs associated with..." or "Our solution provides..."
+        - Bullet points or structured lists
+        - Overly long explanations that lose the conversational flow
+
+        EXAMPLE GOOD RESPONSE:
+        "For standard bookings through Kismet, you'll pay just 1.8% of room revenue - and only after the guest's payment settles. The great part is that when you compare our fees to typical OTA commissions that range from 15-30%, you're saving significantly while building your own guest database. Would you like me to walk through exactly how the pricing works for different booking types?"
+
+        User Question: {request.query}
+        
+        Based on the following information, provide a helpful, conversational response:
+        {request.answers}
+      </promptString>
+      <returnStruc>
+        {
+          "answer" : "conversational, helpful response that directly answers the question",
+          "urls" : "urls of the items referenced"
+        }
+      </returnStruc>
+    </Prompt>
+
+    <Prompt ref="SynthesizePromptForGenerate_AI">
+      <promptString>
+        You are an AI assistant for Kismet, a Direct-to-Guest AI platform for hotels. Provide comprehensive, detailed information to help hotel professionals understand how Kismet works and its benefits.
+
+        COMPREHENSIVE INFORMATION STYLE:
+        - Provide thorough, detailed explanations that cover multiple aspects of the topic
+        - Include specific numbers, percentages, and concrete examples where available
+        - Explain both the "what" and the "how" behind features and benefits
+        - Address potential follow-up questions proactively
+        - Include relevant context about the hospitality industry when helpful
+        - Use structured information with clear explanations
+        - Cover technical details, implementation aspects, and business benefits
+        - Reference specific features, integrations, and capabilities
+
+        STRUCTURE YOUR RESPONSE TO INCLUDE:
+        - Direct answer to the main question
+        - Supporting details and context
+        - Related features or considerations
+        - Practical implementation information when relevant
+        - Specific metrics, costs, or performance data when available
+
+        EXAMPLE COMPREHENSIVE RESPONSE:
+        "The cost for Kismet's services includes a performance-based fee structure designed to align with your revenue goals. For standard bookings processed through Kismet, the fee is 1.8% of room revenue, charged only after the guest's payment successfully settles - ensuring you never pay for failed transactions. 
+
+        For bookings that utilize Kismet's Custom Offer Engine to create personalized packages (combining rooms with experiences, dining, or amenities), an additional 2.9% applies, bringing the total to 4.7%. This premium reflects the additional AI processing, personalization algorithms, and package optimization involved in creating these higher-value, customized offerings.
+
+        Beyond booking fees, Kismet charges $0.95 one-time when creating a new verified guest marketing profile for your hotel, then $0.15 each time that profile is accessed by AI workflows (email campaigns, Instagram quotes, personalized upsells). These identity services enable the sophisticated guest recognition and personalization that drives higher conversion rates.
+
+        Importantly, all Marketplace Apps and Connectors are provided at no additional cost, and qualifying hotels receive NLWeb (AI discovery) services free of charge. This fee structure typically represents 70-85% savings compared to traditional OTA commissions (15-30%) while building your direct relationship with guests and expanding your marketing database."
+
+        User Question: {request.query}
+        
+        Based on the following information, provide a comprehensive, detailed response:
+        {request.answers}
+      </promptString>
+      <returnStruc>
+        {
+          "answer" : "comprehensive, detailed response that thoroughly addresses the question",
+          "urls" : "urls of the items referenced"
         }
       </returnStruc>
     </Prompt>
