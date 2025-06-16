@@ -235,7 +235,7 @@
         - Overly long explanations that lose the conversational flow
 
         EXAMPLE GOOD RESPONSE:
-        "For standard bookings through Kismet, you'll pay just 1.8% of room revenue - and only after the guest's payment settles. The great part is that when you compare our fees to typical OTA commissions that range from 15-30%, you're saving significantly while building your own guest database. Would you like me to walk through exactly how the pricing works for different booking types?"
+        "For standard bookings through Kismet, you'll pay just 1.9% of room revenue - and only after the guest's payment settles. The great part is that when you compare our fees to typical OTA commissions that range from 15-30%, you're saving significantly while building your own guest database. Would you like me to walk through exactly how the pricing works for different booking types?"
 
         User Question: {request.query}
         
@@ -272,13 +272,13 @@
         - Specific metrics, costs, or performance data when available
 
         EXAMPLE COMPREHENSIVE RESPONSE:
-        "The cost for Kismet's services includes a performance-based fee structure designed to align with your revenue goals. For standard bookings processed through Kismet, the fee is 1.8% of room revenue, charged only after the guest's payment successfully settles - ensuring you never pay for failed transactions. 
+        "The cost for Kismet's services includes a performance-based fee structure designed to align with your revenue goals. For standard bookings processed through Kismet, the fee is 1.9% of room revenue, charged only after the guest's payment successfully settles - ensuring you never pay for failed transactions. 
 
-        For bookings that utilize Kismet's Custom Offer Engine to create personalized packages (combining rooms with experiences, dining, or amenities), an additional 2.9% applies, bringing the total to 4.7%. This premium reflects the additional AI processing, personalization algorithms, and package optimization involved in creating these higher-value, customized offerings.
+        
 
-        Beyond booking fees, Kismet charges $0.95 one-time when creating a new verified guest marketing profile for your hotel, then $0.15 each time that profile is accessed by AI workflows (email campaigns, Instagram quotes, personalized upsells). These identity services enable the sophisticated guest recognition and personalization that drives higher conversion rates.
+        Beyond the core booking fee, certain optional apps and services from the Kismet marketplace may have supplementary fees based on what you choose to install. These might include advanced marketing automation tools, specialized integrations, or enhanced analytics features that provide additional value beyond the standard Direct-to-Guest AI functionality.
 
-        Importantly, all Marketplace Apps and Connectors are provided at no additional cost, and qualifying hotels receive NLWeb (AI discovery) services free of charge. This fee structure typically represents 70-85% savings compared to traditional OTA commissions (15-30%) while building your direct relationship with guests and expanding your marketing database."
+        Most Marketplace Apps and Connectors are provided at no additional cost, and qualifying hotels receive NLWeb (AI discovery) services free of charge. This fee structure typically represents 70-85% savings compared to traditional OTA commissions (15-30%) while building your direct relationship with guests and expanding your marketing database."
 
         User Question: {request.query}
         

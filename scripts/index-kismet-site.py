@@ -22,8 +22,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'code'))
 from tools.db_load import loadJsonToDB, delete_site_from_database
 
 SITE_NAME = "makekismet"
-SITEMAP_URL = "https://www.makekismet.com/sitemap.xml"
-SITE_BASE_URL = "https://www.makekismet.com"
+SITEMAP_URL = "https://makekismet.com/sitemap.xml"
+SITE_BASE_URL = "https://makekismet.com"
 
 # Known structured data URLs from nlweb.json
 STRUCTURED_URLS = [
